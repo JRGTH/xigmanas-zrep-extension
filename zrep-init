@@ -41,6 +41,7 @@ PRDPLATFORM=$(cat /etc/platform)
 SCRIPTNAME=$(basename $0)
 CONFIG="/cf/conf/config.xml"
 APPNAME="zrep"
+KSH9X="ksh93"
 EXTLOGFILE="${CWDIR}/log/zrep_ext.log"
 FULLAPPNAME="${APPNAME}-addon"
 PKGCONF="/etc/pkg/FreeBSD.conf"
@@ -49,10 +50,9 @@ USRLOCAL="/usr/local"
 KSH9PATH="${USRLOCAL}/bin"
 ZREPPATH="${USRLOCAL}/bin"
 INSTALLPATH="${CWDIR}/${FULLAPPNAME}"
-KSH9X="ksh93"
+BRANCH="master"
 ZREPURL="https://github.com/bolthole/zrep/archive/master.zip"
 ZREPURL_ALT="https://github.com/JRGTH/zrep/archive/master.zip" # Includes date fallback bug fix.
-BRANCH="master"
 GITURL="https://github.com/JRGTH/xigmanas-zrep-extension/archive/${BRANCH}.zip"
 VERFILE="https://raw.githubusercontent.com/JRGTH/xigmanas-zrep-extension/${BRANCH}/version"
 
@@ -339,14 +339,10 @@ EOF
 
 		# Execute temporary php script.
 		if [ "${OBI_INSTALL}" != "ON" ]; then
-			echo "Generating postinit command..."
+			echo "Creating postinit command..."
 			php-cgi -f ${CWDIR}/postinit && rm ${CWDIR}/postinit || \
 			error_notify "Error: A problem has occurred while executing postinit file."
 			echo "Done!"
-		else
-			if [ -f ${CWDIR}/postinit ]; then
-				rm -f ${CWDIR}/postinit
-			fi
 		fi
 	fi
 }
