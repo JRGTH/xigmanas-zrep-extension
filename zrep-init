@@ -147,6 +147,19 @@ update_zrep_shebang()
 	fi
 }
 
+ext_initial_download()
+{
+	# Always ensure the version file is present, otherwise update the extension files on startup.
+	if [ ! -f ${CWDIR}/version ]; then
+		mkdir -p ${CWDIR}/update
+		fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${GITURL} || "Error: A problem has occurred while fetching extension package."
+		tar -xf ${CWDIR}/update/*${BRANCH}.zip --exclude='.git*' --strip-components 1 -C ${CWDIR}/update
+		chmod +x ${CWDIR}/update/${SCRIPTNAME}
+		cp -Rf ${CWDIR}/update/* ${CWDIR}/
+		rm -R ${CWDIR}/update
+	fi
+}
+
 extension_upgrade()
 {
 	# Perform an online extension upgrade.
@@ -166,8 +179,7 @@ extension_upgrade()
 			error_notify "Error: A problem has occurred while fetching extension package."
 			tar -xf ${CWDIR}/update/*${BRANCH}.zip --exclude='.git*' --strip-components 1 -C ${CWDIR}/update
 			chmod +x ${CWDIR}/update/${SCRIPTNAME}
-			cp -Rf ${CWDIR}/update/${SCRIPTNAME} ${CWDIR}/
-			cp -Rf ${CWDIR}/update/version ${CWDIR}/
+			cp -Rf ${CWDIR}/update/* ${CWDIR}/
 			rm -R ${CWDIR}/update
 
 			# Logging the update event.
@@ -208,12 +220,14 @@ platform_check()
 	# Check for working platform.
 	if [ "${PRDPLATFORM}" = "x64-embedded" ]; then
 		create_addon_env
+		ext_initial_download
 		update_freebsdconf
 		ksh9x_initial_download
 		zrep_initial_download
 		sys_symlinkdir
 	elif [ "${PRDPLATFORM}" = "x64-full" ]; then
 		create_addon_env
+		ext_initial_download
 		update_freebsdconf
 		ksh9x_native_download
 		zrep_initial_download
