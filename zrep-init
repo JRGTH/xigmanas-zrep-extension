@@ -1,0 +1,428 @@
+#!/bin/sh
+# zrep-init
+# zrep/ksh9x add-on for NAS4Free/XigmaNAS Embedded x64 11.x and later.
+# Credits: Philip Brown (pbrown) ZREP: http://www.bolthole.com/solaris/zrep/
+# Debug script
+#set -x
+
+# Copyright (c) 2018 José Rivera (JoseMR)
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS 'AS IS' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Set environment.
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+
+# Determine full working directory.
+CWDIR=$(dirname $(realpath $0))
+
+# Global variables.
+PLATFORM=$(uname -m)
+PRODUCT=$(uname -i)
+PRDVERSION=$(uname -r | cut -d '-' -f1 | tr -d '.')
+PRDPLATFORM=$(cat /etc/platform)
+SCRIPTNAME=$(basename $0)
+CONFIG="/cf/conf/config.xml"
+APPNAME="zrep"
+EXTLOGFILE="${CWDIR}/log/zrep_ext.log"
+FULLAPPNAME="${APPNAME}-addon"
+PKGCONF="/etc/pkg/FreeBSD.conf"
+PKGCACHE="/var/cache/pkg"
+USRLOCAL="/usr/local"
+KSH9PATH="${USRLOCAL}/bin"
+ZREPPATH="${USRLOCAL}/bin"
+INSTALLPATH="${CWDIR}/${FULLAPPNAME}"
+KSH9X="ksh93"
+ZREPURL="https://github.com/bolthole/zrep/archive/master.zip"
+ZREPURL_ALT="https://github.com/JRGTH/zrep/archive/master.zip" # Includes date fallback bug fix.
+BRANCH="master"
+GITURL="https://github.com/JRGTH/xigmanas-zrep-extension/archive/${BRANCH}.zip"
+VERFILE="https://raw.githubusercontent.com/JRGTH/xigmanas-zrep-extension/${BRANCH}/version"
+
+error_notify()
+{
+	# Logg and notify message on error and exit.
+	logger "${SCRIPTNAME}: an error has occurred during initialize"
+	echo -e "$*" >&2 ; exit 1
+}
+
+update_freebsdconf()
+{
+	# Update FreeBSD.conf to fetch latest packages.
+	if [ -f ${PKGCONF} ]; then 
+		if grep -q "quarterly" ${PKGCONF}; then
+			sed -i '' -E "s/quarterly/latest/g" ${PKGCONF} || \
+			error_notify "Error: A problem has occurred while updating FreeBSD.conf file."
+		fi
+	fi
+}
+
+ksh9x_native_download()
+{
+	# Check if ksh9x already exist.
+	if [ ! -f ${KSH9PATH}/${KSH9X} ]; then
+		# Install latest ksh9x package.
+		if ! pkg info | grep -q ${KSH9X}; then
+			pkg install -y ${KSH9X} || error_notify "Error: A problem has occurred while fetching ${KSH9X}."
+		fi
+	fi
+}
+
+ksh9x_initial_download()
+{
+	# Check if ksh9x already exist.
+	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${KSH9PATH}/${KSH9X} ]; then
+		# Fetch ksh9x package.
+		pkg fetch -y -o ${CWDIR}/download ${KSH9X} || \
+		error_notify "Error: A problem has occurred while fetching ${KSH9X}."
+		ksh9x_pkg_extract
+	fi
+}
+
+ksh9x_pkg_extract()
+{
+	# Extract fetched package for Embedded platform.
+	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${KSH9X}/+MANIFEST ]; then
+		echo "Extracting ${KSH9X}..."
+		tar -Jxf ${CWDIR}/download/All/${KSH9X}-*.txz -C ${CWDIR}/${FULLAPPNAME}/ || \
+		error_notify "Error: A problem has occurred while extractig ${KSH9X} files."
+		mkdir -p ${CWDIR}/${FULLAPPNAME}/${KSH9X}
+		mv ${CWDIR}/${FULLAPPNAME}/+* ${CWDIR}/${FULLAPPNAME}/${KSH9X}
+		rm ${CWDIR}/download/All/${KSH9X}-*.txz
+		echo "Done!"
+	fi
+}
+
+zrep_initial_download()
+{
+	# Check if zrep already exist.
+	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/${APPNAME} ]; then
+		# Fetch latest zrep package.
+		fetch -ao ${CWDIR}/master.zip --no-verify-peer --timeout=30 ${ZREPURL_ALT} || \
+		error_notify "Error: A problem has occurred while fetching ${APPNAME}."
+		zrep_pkg_extract
+	fi
+}
+
+zrep_pkg_extract()
+{
+	if [ -f ${CWDIR}/master.zip ]; then
+		if [ ! -f ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME} ]; then
+			echo "Extracting ${APPNAME}..."
+			tar -xf ${CWDIR}/master.zip -C ${CWDIR}/${FULLAPPNAME}${ZREPPATH} --strip-components 1 zrep-master/zrep || \
+			error_notify "Error: A problem has occurred while extractig ${APPNAME} files."
+			chmod 555 ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME}
+			rm -f ${CWDIR}/master.zip
+			update_zrep_shebang
+			echo "Done!"
+		fi
+	fi
+}
+
+update_zrep_shebang()
+{
+	# Update zrep shebang to meet FreeBSD requirements.
+	if [ -f ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME} ]; then 
+		if grep -q "#!/bin/ksh" ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME}; then
+			sed -i '' '1s/.*/#!\/usr\/local\/bin\/ksh93\ -p/' ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME} || \
+			error_notify "Error: A problem has occurred while updating zrep shebang."
+		fi
+	fi
+}
+
+extension_upgrade()
+{
+	# Perform an online extension upgrade.
+	DATE=$(date +"%a %b %d %T %Y")
+	echo "Looking for new ${FULLAPPNAME} package!"
+	mkdir -p ${CWDIR}/update
+	fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${VERFILE} || \
+	error_notify "Error: A problem has occurred while fetching version file."
+
+	# Compare version files and fetch latest package if available.
+	if [ -f ${CWDIR}/update/version ]; then
+		UPDATEVER=$(cat ${CWDIR}/update/version | tr -d .)
+		CURRENTVER=$(cat ${CWDIR}/version | tr -d .)
+		if [ "${UPDATEVER}" -gt "${CURRENTVER}" ]; then
+			echo "New ${FULLAPPNAME} package found, performing upgrade..."
+			fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${GITURL} || \
+			error_notify "Error: A problem has occurred while fetching extension package."
+			tar -xf ${CWDIR}/update/*${BRANCH}.zip --exclude='.git*' --strip-components 1 -C ${CWDIR}/update
+			chmod +x ${CWDIR}/update/${SCRIPTNAME}
+			cp -Rf ${CWDIR}/update/${SCRIPTNAME} ${CWDIR}/
+			cp -Rf ${CWDIR}/update/version ${CWDIR}/
+			rm -R ${CWDIR}/update
+
+			# Logging the update event.
+			UPDATEVERSION=$(cat ${CWDIR}/version)
+			echo "${DATE}: ${FULLAPPNAME} upgraded to ${UPDATEVERSION}" >> ${EXTLOGFILE}
+			echo "${FULLAPPNAME} package upgrade completed!"
+		else
+			echo "${FULLAPPNAME} is on the latest version!"
+			rm -R ${CWDIR}/update
+		fi
+	fi
+}
+
+create_addon_env()
+{
+	# Create required directories.
+	if [ ! -d ${CWDIR}/download/All ]; then
+		mkdir -p ${CWDIR}/download/All
+	fi
+	if [ ! -d ${CWDIR}/log ]; then
+		mkdir -p ${CWDIR}/log
+	fi
+	if [ ! -d ${CWDIR}/${FULLAPPNAME} ]; then
+		mkdir -p ${CWDIR}/${FULLAPPNAME}
+	fi
+	if [ ! -d ${CWDIR}/${FULLAPPNAME}/${ZREPPATH} ]; then
+		mkdir -p ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}
+	fi
+
+	# Link zrep-init to /usr/local/sbin.
+	if [ ! -f ${USRLOCAL}/sbin/${SCRIPTNAME} ]; then
+		ln -fs ${CWDIR}/${SCRIPTNAME} ${USRLOCAL}/sbin/${SCRIPTNAME}
+	fi
+}
+
+platform_check()
+{
+	# Check for working platform.
+	if [ "${PRDPLATFORM}" = "x64-embedded" ]; then
+		create_addon_env
+		update_freebsdconf
+		ksh9x_initial_download
+		zrep_initial_download
+		sys_symlinkdir
+	elif [ "${PRDPLATFORM}" = "x64-full" ]; then
+		create_addon_env
+		update_freebsdconf
+		ksh9x_native_download
+		zrep_initial_download
+		bin_symlinks
+	fi
+}
+
+bin_symlinks()
+{
+	# Main zrep/ksh9x symlinks.
+	if [ -d ${INSTALLPATH}/${USRLOCAL}/bin ]; then
+		cd ${INSTALLPATH}/${USRLOCAL}/bin
+		for file in *
+			do
+				ln -Ffhs ${INSTALLPATH}/${USRLOCAL}/bin/${file} ${USRLOCAL}/bin/${file}
+		done
+	fi
+}
+
+sys_symlinkdir()
+{
+	# Check and create/relink required symlinks/dirs for zrep/ksh9x.
+	# This environment will be checked each time the script is started for consistency.
+
+	# Required directories for ksh9x.
+	if [ ! -d ${USRLOCAL}/share/examples ]; then
+		mkdir -p ${USRLOCAL}/share/examples
+	fi
+	if [ ! -d ${USRLOCAL}/man/man1 ]; then
+		mkdir -p ${USRLOCAL}/man/man1
+	fi
+	if [ ! -d ${USRLOCAL}/share/licenses ]; then
+		mkdir -p ${USRLOCAL}/share/licenses
+	fi
+
+	bin_symlinks
+
+	# Required symlinks for ksh9x. 
+	if [ -d ${INSTALLPATH}/${USRLOCAL}/man/man1 ]; then
+		cd ${INSTALLPATH}/${USRLOCAL}/man/man1
+		for file in *
+			do
+				ln -Ffhs ${INSTALLPATH}/${USRLOCAL}/man/man1/${file} ${USRLOCAL}/man/man1/${file}
+		done
+	fi
+	if [ -d ${INSTALLPATH}/${USRLOCAL}/share/examples ]; then
+		cd ${INSTALLPATH}/${USRLOCAL}/share/examples
+		for file in *
+			do
+				ln -Ffhs ${INSTALLPATH}/${USRLOCAL}/share/examples/${file} ${USRLOCAL}/share/examples/${file}
+		done
+	fi
+	if [ -d ${INSTALLPATH}/${USRLOCAL}/share/licenses ]; then
+		cd ${INSTALLPATH}/${USRLOCAL}/share/licenses
+		for file in *
+			do
+				ln -Ffhs ${INSTALLPATH}/${USRLOCAL}/share/licenses/${file} ${USRLOCAL}/share/licenses/${file}
+		done
+	fi
+}
+
+postinit_cmd()
+{
+	# Check and generate temporary php script for postinit command.
+	if ! grep -qw ${CWDIR}/${SCRIPTNAME} ${CONFIG}; then
+		touch ${CWDIR}/postinit || error_notify "Error: A problem has occurred while creating the postinit file."
+		chmod +x ${CWDIR}/postinit
+		if [ ! "${PRDVERSION}" -ge "110" ]; then
+			# Generate php script for NAS4Free 10.3 versions.
+			cat << EOF > ${CWDIR}/postinit
+<?php
+require_once("config.inc");
+require_once("functions.inc");
+\$cmd = dirname(__FILE__)."/${SCRIPTNAME}";
+	\$i =0;
+	if ( is_array(\$config['rc']['postinit'] ) && is_array( \$config['rc']['postinit']['cmd'] ) ) {
+		for (\$i; \$i < count(\$config['rc']['postinit']['cmd']);) {
+			if (preg_match('/${SCRIPTNAME}/', \$config['rc']['postinit']['cmd'][\$i])) break; ++\$i; }
+	}
+	\$config['rc']['postinit']['cmd'][\$i] = \$config['cmd']."\$cmd";
+	write_config();
+?>
+EOF
+		else
+			# Generate php script for NAS4Free/XigmaNAS 11.x versions.
+			cat << EOF > ${CWDIR}/postinit
+<?php
+require_once("config.inc");
+require_once("functions.inc");
+\$cmd = dirname(__FILE__)."/${SCRIPTNAME}";
+\$name = "Zrep Extension";
+\$comment = "Start ${APPNAME}";
+\$rc = &array_make_branch(\$config,'rc','param'); 
+if(false === array_search_ex(\$name,\$rc,'name')):
+	\$rc_param = [];
+	\$rc_param['uuid'] = uuid();
+	\$rc_param['name'] = \$name;
+	\$rc_param['value'] = \$cmd;
+	\$rc_param['comment'] = \$comment;
+	\$rc_param['typeid'] = '2';
+	\$rc_param['enable'] = true;
+	\$rc[] = \$rc_param;
+	write_config();
+endif;
+unset(\$rc);
+?>
+EOF
+		fi
+
+		# Execute temporary php script.
+		if [ "${OBI_INSTALL}" != "ON" ]; then
+			echo "Generating postinit command..."
+			php-cgi -f ${CWDIR}/postinit && rm ${CWDIR}/postinit || \
+			error_notify "Error: A problem has occurred while executing postinit file."
+			echo "Done!"
+		else
+			if [ -f ${CWDIR}/postinit ]; then
+				rm -f ${CWDIR}/postinit
+			fi
+		fi
+	fi
+}
+
+pkg_upgrade()
+{
+	# Re-fetch zrep and extract.
+	echo "Removing current zrep files and re-inistalling..."
+	rm -rf ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/zrep
+	zrep_initial_download
+
+	# Check for extension updates.
+	extension_upgrade
+}
+
+reset_install()
+{
+	echo "Removing extension files and re-initializing..."
+	if [ -d ${CWDIR}/${FULLAPPNAME} ]; then
+		rm -rf ${CWDIR}/${FULLAPPNAME}
+	fi
+	if [ -d ${CWDIR}/download} ]; then
+		rm -rf ${CWDIR}/download
+	fi
+	if [ -f ${CWDIR}/version} ]; then
+		rm -f ${CWDIR}/version
+	fi
+}
+
+get_versions()
+{
+	# Get current zrep-addon extension version.
+	if [ -f "${CWDIR}/version" ]; then
+		APPVERSION=$(cat ${CWDIR}/version)
+	else
+		APPVERSION="version file not found!"
+	fi
+
+	# Display product versions.
+	echo -e "\nksh93 version:" && ${USRLOCAL}/bin/ksh93 --version
+	echo -e "\nzrep version:" && ${USRLOCAL}/bin/ksh93 zrep version
+	echo -e "\nextension version:"
+	echo "${FULLAPPNAME} ${APPVERSION}"
+	exit 0
+}
+
+exec_status()
+{
+	# Logg on startup success, else logging with faults.
+	if [ $? -eq 0 ]; then
+		MSG="script has been started successfully!"
+		logger -t ${SCRIPTNAME} ${MSG}
+	else
+		MSG="script started with faults"
+		logger -t ${SCRIPTNAME} ${MSG}
+	fi
+}
+
+zrep_init()
+{
+	# Check for system compatibility.
+	if [ ! "${PLATFORM}" = "amd64" ]; then
+		echo "Unsupported platform!"; exit 1
+	fi 
+	# Check for product compatibility.
+	if [ ! "${PRDVERSION}" -ge "110" ]; then
+		echo "Unsupported version!"; exit 1
+	fi
+
+	echo "Initializing ${FULLAPPNAME}..."
+
+	# Function calls.
+	platform_check
+	postinit_cmd
+	exec_status
+}
+
+while getopts ":ouxvh" option; do
+	case ${option} in
+		[h]) echo "Usage: ${SCRIPTNAME} -[option]";
+		echo "Options:"
+		echo "      -u  Upgrade Zrep/Add-On packages."
+		echo "      -v  Display product versions."
+		echo "      -x  Reset ${FULLAPPNAME}."
+		echo "      -h  Display this help message."; exit 0;;
+		[o]) OBI_INSTALL="ON";; # To prevent nested PHP-CGI call for installation with OBI.
+		[u]) pkg_upgrade;;
+		[x]) reset_install;;
+		[v]) get_versions;;
+		[?]) echo "Invalid option, -h for usage."; exit 1;;
+	esac
+done
+zrep_init
