@@ -59,8 +59,9 @@ VERFILE="https://raw.githubusercontent.com/JRGTH/xigmanas-zrep-extension/${BRANC
 error_notify()
 {
 	# Logg and notify message on error and exit.
-	logger "${SCRIPTNAME}: an error has occurred during initialize"
-	echo -e "$*" >&2 ; exit 1
+	MSG="An error has occurred during initialize"
+	logger -t "${SCRIPTNAME}" "${MSG}"
+	echo -e "$*" >&2; exit 1
 }
 
 update_freebsdconf()
@@ -115,6 +116,7 @@ zrep_initial_download()
 	# Check if zrep already exist.
 	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/${APPNAME} ]; then
 		# Fetch latest zrep package.
+		echo "Fetching ${APPNAME} files..."
 		fetch -ao ${CWDIR}/master.zip --no-verify-peer --timeout=30 ${ZREPURL_ALT} || \
 		error_notify "Error: A problem has occurred while fetching ${APPNAME}."
 		zrep_pkg_extract
@@ -151,12 +153,15 @@ ext_initial_download()
 {
 	# Always ensure the version file is present, otherwise update the extension files on startup.
 	if [ ! -f ${CWDIR}/version ]; then
+		echo "Fetching and extracting extension files..."
 		mkdir -p ${CWDIR}/update
-		fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${GITURL} || "Error: A problem has occurred while fetching extension package."
+		fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${GITURL} || \
+		error_notify "Error: A problem has occurred while fetching extension package."
 		tar -xf ${CWDIR}/update/*${BRANCH}.zip --exclude='.git*' --strip-components 1 -C ${CWDIR}/update
 		chmod +x ${CWDIR}/update/${SCRIPTNAME}
 		cp -Rf ${CWDIR}/update/* ${CWDIR}/
 		rm -R ${CWDIR}/update
+		echo "Done!"
 	fi
 }
 
@@ -350,7 +355,7 @@ EOF
 pkg_upgrade()
 {
 	# Re-fetch zrep and extract.
-	echo "Removing current zrep files and re-inistalling..."
+	echo "Removing current zrep files..."
 	rm -rf ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/zrep
 	zrep_initial_download
 
@@ -360,14 +365,14 @@ pkg_upgrade()
 
 reset_install()
 {
-	echo "Removing extension files and re-initializing..."
+	echo "Removing extension files..."
 	if [ -d ${CWDIR}/${FULLAPPNAME} ]; then
 		rm -rf ${CWDIR}/${FULLAPPNAME}
 	fi
-	if [ -d ${CWDIR}/download} ]; then
+	if [ -d ${CWDIR}/download ]; then
 		rm -rf ${CWDIR}/download
 	fi
-	if [ -f ${CWDIR}/version} ]; then
+	if [ -f ${CWDIR}/version ]; then
 		rm -f ${CWDIR}/version
 	fi
 }
