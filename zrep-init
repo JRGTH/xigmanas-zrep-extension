@@ -1,7 +1,9 @@
 #!/bin/sh
 # zrep-init
 # zrep/ksh9x add-on for NAS4Free/XigmaNAS Embedded x64 11.x and later.
+# (https://www.xigmanas.com/forums/viewtopic.php?f=71&t=13966)
 # Credits: Philip Brown (pbrown) ZREP: http://www.bolthole.com/solaris/zrep/
+# License: BSD2CLAUSE (BSD 2-clause Simplified License).
 # Debug script
 #set -x
 
@@ -52,14 +54,14 @@ ZREPPATH="${USRLOCAL}/bin"
 INSTALLPATH="${CWDIR}/${FULLAPPNAME}"
 BRANCH="master"
 ZREPURL="https://github.com/bolthole/zrep/archive/master.zip"
-ZREPURL_ALT="https://github.com/JRGTH/zrep/archive/master.zip" # Includes date fallback bug fix.
+ZREPURL_ALT="https://github.com/JRGTH/zrep/archive/master.zip" # Includes date fallback fix.
 GITURL="https://github.com/JRGTH/xigmanas-zrep-extension/archive/${BRANCH}.zip"
 VERFILE="https://raw.githubusercontent.com/JRGTH/xigmanas-zrep-extension/${BRANCH}/version"
 
 error_notify()
 {
-	# Logg and notify message on error and exit.
-	MSG="An error has occurred during initialize"
+	# Log/notify message on error and exit.
+	MSG="$*"
 	logger -t "${SCRIPTNAME}" "${MSG}"
 	echo -e "$*" >&2; exit 1
 }
