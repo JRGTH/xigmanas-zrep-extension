@@ -79,10 +79,11 @@ update_freebsdconf()
 
 ksh9x_native_download()
 {
-	# Check if ksh9x already exist.
-	if [ ! -f ${KSH9PATH}/${KSH9X} ]; then
-		# Install latest ksh9x package.
-		if ! pkg info | grep -q ${KSH9X}; then
+	# Install latest ksh9x package.
+	if ! pkg info | grep -q ${KSH9X}; then
+		# Check if ksh9x already exist.
+		if [ ! -f ${KSH9PATH}/${KSH9X} ]; then
+			update_freebsdconf
 			pkg install -y ${KSH9X} || error_notify "Error: A problem has occurred while fetching ${KSH9X}."
 		fi
 	fi
@@ -93,6 +94,7 @@ ksh9x_initial_download()
 	# Check if ksh9x already exist.
 	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${KSH9PATH}/${KSH9X} ]; then
 		# Fetch ksh9x package.
+		update_freebsdconf
 		pkg fetch -y -o ${CWDIR}/download ${KSH9X} || \
 		error_notify "Error: A problem has occurred while fetching ${KSH9X}."
 		ksh9x_pkg_extract
@@ -228,14 +230,14 @@ platform_check()
 	if [ "${PRDPLATFORM}" = "x64-embedded" ]; then
 		create_addon_env
 		ext_initial_download
-		update_freebsdconf
+		#update_freebsdconf
 		ksh9x_initial_download
 		zrep_initial_download
 		sys_symlinkdir
 	elif [ "${PRDPLATFORM}" = "x64-full" ]; then
 		create_addon_env
 		ext_initial_download
-		update_freebsdconf
+		#update_freebsdconf
 		ksh9x_native_download
 		zrep_initial_download
 		bin_symlinks
