@@ -53,7 +53,7 @@ KSH9PATH="${USRLOCAL}/bin"
 ZREPPATH="${USRLOCAL}/bin"
 INSTALLPATH="${CWDIR}/${FULLAPPNAME}"
 BRANCH="master"
-ZREPURL="https://github.com/bolthole/zrep/archive/master.zip"
+ZREPURL="https://github.com/bolthole/zrep/archive/master.zip" # Includes latest bugfixes and portability.
 ZREPURL_ALT="https://github.com/JRGTH/zrep/archive/master.zip" # Includes date fallback fix.
 GITURL="https://github.com/JRGTH/xigmanas-zrep-extension/archive/${BRANCH}.zip"
 VERFILE="https://raw.githubusercontent.com/JRGTH/xigmanas-zrep-extension/${BRANCH}/version"
@@ -121,7 +121,7 @@ zrep_initial_download()
 	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/${APPNAME} ]; then
 		# Fetch latest zrep package.
 		echo "Fetching ${APPNAME} files..."
-		fetch -ao ${CWDIR}/master.zip --no-verify-peer --timeout=30 ${ZREPURL_ALT} || \
+		fetch -ao ${CWDIR}/master.zip --no-verify-peer --timeout=30 ${ZREPURL} || \
 		error_notify "Error: A problem has occurred while fetching ${APPNAME}."
 		zrep_pkg_extract
 	fi
