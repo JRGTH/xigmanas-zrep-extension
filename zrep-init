@@ -129,6 +129,7 @@ zrep_initial_download()
 
 zrep_pkg_extract()
 {
+	# Extract zrep script from package.
 	if [ -f ${CWDIR}/master.zip ]; then
 		if [ ! -f ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME} ]; then
 			echo "Extracting ${APPNAME}..."
@@ -230,14 +231,12 @@ platform_check()
 	if [ "${PRDPLATFORM}" = "x64-embedded" ]; then
 		create_addon_env
 		ext_initial_download
-		#update_freebsdconf
 		ksh9x_initial_download
 		zrep_initial_download
 		sys_symlinkdir
 	elif [ "${PRDPLATFORM}" = "x64-full" ]; then
 		create_addon_env
 		ext_initial_download
-		#update_freebsdconf
 		ksh9x_native_download
 		zrep_initial_download
 		bin_symlinks
@@ -358,7 +357,7 @@ EOF
 
 pkg_upgrade()
 {
-	# Re-fetch zrep and extract.
+	# Re-fetch zrep package and extract.
 	echo "Removing current zrep files..."
 	rm -rf ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/zrep
 	zrep_initial_download
@@ -369,6 +368,7 @@ pkg_upgrade()
 
 reset_install()
 {
+	# Reset the extension environment.
 	echo "Removing extension files..."
 	if [ -d ${CWDIR}/${FULLAPPNAME} ]; then
 		rm -rf ${CWDIR}/${FULLAPPNAME}
@@ -383,7 +383,7 @@ reset_install()
 
 get_versions()
 {
-	# Get current zrep-addon extension version.
+	# Get zrep-addon extension version.
 	if [ -f "${CWDIR}/version" ]; then
 		APPVERSION=$(cat ${CWDIR}/version)
 	else
@@ -400,7 +400,7 @@ get_versions()
 
 exec_status()
 {
-	# Logg on startup success, else logging with faults.
+	# Log on startup success, else logging with faults.
 	if [ $? -eq 0 ]; then
 		MSG="script has been started successfully!"
 		logger -t ${SCRIPTNAME} ${MSG}
