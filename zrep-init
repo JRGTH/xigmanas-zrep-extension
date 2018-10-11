@@ -381,6 +381,57 @@ reset_install()
 	fi
 }
 
+remove_addon()
+{
+	# Confirm for addon removal.
+	while :
+		do
+			read -p "Do you wish to proceed with the ${FULLAPPNAME} removal? [y/N]:" yn
+			case ${yn} in
+			[Yy]) break;;
+			[Nn]) exit 0;;
+			esac
+		done
+	echo "Proceeding..."
+
+	# Check for working platform.
+	if [ "${PRDPLATFORM}" = "x64-embedded" ]; then
+		if [ -d ${USRLOCAL}/share/examples/${KSH9X} ]; then
+			rm -rf ${USRLOCAL}/share/examples/${KSH9X}
+		fi
+		if [ -f ${USRLOCAL}/man/man1/${KSH9X}.1.gz ]; then
+			rm -f ${USRLOCAL}/man/man1/${KSH9X}.1.gz
+		fi
+		if [ -d ${USRLOCAL}/share/licenses/${KSH9X}-20120801_2 ]; then
+			rm -rf ${USRLOCAL}/share/licenses/${KSH9X}-20120801_2
+		fi
+		if [ -f ${USRLOCAL}/bin/${KSH9X} ]; then
+			rm -f ${USRLOCAL}/bin/${KSH9X}
+		fi
+		if [ -f ${USRLOCAL}/bin/${APPNAME} ]; then
+			rm -f ${USRLOCAL}/bin/${APPNAME}
+		fi
+	elif [ "${PRDPLATFORM}" = "x64-full" ]; then
+		if [ -f ${USRLOCAL}/bin/${APPNAME} ]; then
+			rm -f ${USRLOCAL}/bin/${APPNAME}
+		fi
+		pkg delete -y ${KSH9X}
+	fi
+
+	# Remove addon related files and folders only-
+	# to protect any user-created custom files.
+	FILES="download log zrep-addon README.md postinit release_notes version zrep-init"
+	for file in ${FILES}; do
+		if [ -f ${CWDIR}/${file} ] || [ -d ${CWDIR}/${file} ]; then
+			rm -rf ${CWDIR}/${file}
+		fi
+	done
+
+	echo "Done!"
+	echo "Please manually remove the Zrep Extension Command Script from the WebGUI."
+	exit 0
+}
+
 get_versions()
 {
 	# Get zrep-addon extension version.
@@ -429,17 +480,19 @@ zrep_init()
 	exec_status
 }
 
-while getopts ":ouxvh" option; do
+while getopts ":ouxrvh" option; do
 	case ${option} in
 		[h]) echo "Usage: ${SCRIPTNAME} -[option]";
 		echo "Options:"
 		echo "      -u  Upgrade Zrep/Add-On packages."
 		echo "      -v  Display product versions."
 		echo "      -x  Reset ${FULLAPPNAME}."
+		echo "      -r  Remove ${FULLAPPNAME}."
 		echo "      -h  Display this help message."; exit 0;;
 		[o]) OBI_INSTALL="ON";; # To prevent nested PHP-CGI call for installation with OBI.
 		[u]) pkg_upgrade;;
 		[x]) reset_install;;
+		[r]) remove_addon;;
 		[v]) get_versions;;
 		[?]) echo "Invalid option, -h for usage."; exit 1;;
 	esac
