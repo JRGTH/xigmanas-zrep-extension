@@ -45,12 +45,17 @@ CONFIG="/cf/conf/config.xml"
 APPNAME="zrep"
 KSH9X="ksh93"
 EXTLOGFILE="${CWDIR}/log/zrep_ext.log"
+ZREPLOGFILE=${EXTLOGFILE}
 FULLAPPNAME="${APPNAME}-addon"
 PKGCONF="/etc/pkg/FreeBSD.conf"
 PKGCACHE="/var/cache/pkg"
 USRLOCAL="/usr/local"
 KSH9PATH="${USRLOCAL}/bin"
 ZREPPATH="${USRLOCAL}/bin"
+LOCALSHAREPATH="${USRLOCAL}/share"
+WWWPATH="/usr/local/www"
+ZREPCONF="/conf/zrep_config"
+ZREPCONFLINK="/var/etc/zrepconf"
 INSTALLPATH="${CWDIR}/${FULLAPPNAME}"
 BRANCH="master"
 ZREPURL="https://github.com/bolthole/zrep/archive/master.zip" # Includes latest bugfixes and portability.
@@ -64,6 +69,20 @@ error_notify()
 	MSG="$*"
 	logger -t "${SCRIPTNAME}" "${MSG}"
 	echo -e "$*" >&2; exit 1
+}
+
+runtime_config()
+{
+	# Create required directories if missing.
+	if [ ! -d ${CWDIR}/conf ]; then
+		mkdir -p ${CWDIR}/conf
+	fi
+	if [ ! -d ${CWDIR}/log ]; then
+		mkdir -p ${CWDIR}/log
+	fi
+	if [ ! -d ${CWDIR}/locale-zrep ]; then
+		mkdir -p ${CWDIR}/locale-zrep
+	fi
 }
 
 update_freebsdconf()
@@ -203,9 +222,24 @@ extension_upgrade()
 	fi
 }
 
+product_check()
+{
+	# Check for the working product.
+	if [ "${PRODUCT}" = "NAS4FREE-x64" ] || [ "${PRODUCT}" = "XIGMANAS-x64" ]; then
+		postinit_cmd
+		gui_start
+	fi
+}
+
 create_addon_env()
 {
 	# Create required directories.
+	if [ ! -d ${CWDIR}/conf ]; then
+		mkdir -p ${CWDIR}/conf
+	fi
+	if [ ! -d ${CWDIR}/locale-zrep ]; then
+		mkdir -p ${CWDIR}/locale-zrep
+	fi
 	if [ ! -d ${CWDIR}/download/All ]; then
 		mkdir -p ${CWDIR}/download/All
 	fi
@@ -352,6 +386,68 @@ EOF
 			error_notify "Error: A problem has occurred while executing postinit file."
 			echo "Done!"
 		fi
+		sysrc -f ${CWDIR}${ZREPCONF} GUI_ENABLE=YES INSTALL_DIR=${CWDIR} >/dev/null 2>&1
+	fi
+}
+
+gui_start()
+{
+	# Initialize the extension gui.
+	if [ -d "${CWDIR}/gui" ]; then
+		# Always ensure the config directory/file exist.
+		if [ ! -f "${CWDIR}${ZREPCONF}" ]; then
+			# Try to restore default configuration.
+			runtime_config
+			# Set default config.
+			sysrc -f ${CWDIR}${ZREPCONF} GUI_ENABLE=YES INSTALL_DIR=${CWDIR} >/dev/null 2>&1
+		fi
+		GUI_STATUS=$(sysrc -f ${CWDIR}${ZREPCONF} -qn GUI_ENABLE)
+		if [ "${GUI_STATUS}" = "YES" ]; then
+			# Store the installation path and link conf.
+			if ! sysrc -f ${CWDIR}${ZREPCONF} -n INSTALL_DIR | grep -q "${CWDIR}"; then
+				sysrc -f ${CWDIR}${ZREPCONF} INSTALL_DIR=${CWDIR} >/dev/null 2>&1
+			fi
+			mkdir -p ${ZREPCONFLINK}
+			ln -Ffhs ${CWDIR}/conf ${ZREPCONFLINK}/conf
+			# Copy the gui files.
+			cp -R ${CWDIR}/gui/* ${WWWPATH}/ || error_notify "Error: A problem has occurred while copying extension gui files."
+		fi
+	fi
+}
+
+gui_enable()
+{
+	# Relink conf and copy the gui files.
+	if [ -d "${CWDIR}/gui" ]; then
+		mkdir -p ${ZREPCONFLINK}
+		ln -Ffhs ${CWDIR}/conf ${ZREPCONFLINK}/conf
+		sysrc -f ${CWDIR}${ZREPCONF} GUI_ENABLE=YES >/dev/null 2>&1
+		cp -R ${CWDIR}/gui/* ${WWWPATH}/ || error_notify "Error: A problem has occurred while copying extension gui files."
+		exit 0
+	else
+		error_notify "Error: Extension gui files not found."
+	fi
+}
+
+gui_disable()
+{
+	# Disable gui if -t option specified.
+	if [ -d "${CWDIR}/gui" ]; then
+		rm -f ${WWWPATH}/zrep-gui.php
+		rm -Rf ${WWWPATH}/ext/zrep-gui
+		rm -f ${LOCALSHAREPATH}/locale-zrep
+		rm -Rf ${ZREPCONFLINK}
+		sysrc -f ${CWDIR}${ZREPCONF} GUI_ENABLE=NO >/dev/null 2>&1 || error_notify "Error: A problem while removing extension gui files."
+		exit 0
+	else
+		error_notify "Error: Extension gui files not found."
+	fi
+
+	# Remove empty ext folder to prevent empty "Extensions" tab.
+	if [ -d "${WWWPATH}/ext" ]; then
+		if [ ! "$(ls -A ${WWWPATH}/ext)" ]; then
+			rm -R ${WWWPATH}/ext
+		fi
 	fi
 }
 
@@ -370,6 +466,15 @@ reset_install()
 {
 	# Reset the extension environment.
 	echo "Removing extension files..."
+	if [ -d ${CWDIR}/conf ]; then
+		rm -rf ${CWDIR}/conf
+	fi
+	if [ -d ${CWDIR}/log ]; then
+		rm -rf ${CWDIR}/log
+	fi
+	if [ -d ${CWDIR}/locale-zrep ]; then
+		rm -rf ${CWDIR}/locale-zrep
+	fi
 	if [ -d ${CWDIR}/${FULLAPPNAME} ]; then
 		rm -rf ${CWDIR}/${FULLAPPNAME}
 	fi
@@ -379,6 +484,7 @@ reset_install()
 	if [ -f ${CWDIR}/version ]; then
 		rm -f ${CWDIR}/version
 	fi
+	runtime_config
 }
 
 remove_addon()
@@ -393,6 +499,13 @@ remove_addon()
 			esac
 		done
 	echo "Proceeding..."
+	
+	if [ -d "${WWWPATH}/zrep-gui.php" ]; then
+		rm -f ${WWWPATH}/zrep-gui.php
+		rm -Rf ${WWWPATH}/ext/zrep-gui
+		rm -f ${LOCALSHAREPATH}/locale-zrep
+		rm -Rf ${ZREPCONFLINK}
+	fi
 
 	# Check for working platform.
 	if [ "${PRDPLATFORM}" = "x64-embedded" ]; then
@@ -420,12 +533,16 @@ remove_addon()
 
 	# Remove addon related files and folders only-
 	# to protect any user-created custom files.
-	FILES="download log zrep-addon README.md postinit release_notes version zrep-init"
+	FILES="conf download gui locale-zrep log zrep-addon README.md postinit release_notes version zrep-init"
 	for file in ${FILES}; do
 		if [ -f ${CWDIR}/${file} ] || [ -d ${CWDIR}/${file} ]; then
 			rm -rf ${CWDIR}/${file}
 		fi
 	done
+	
+	if [ ! -f ${USRLOCAL}/sbin/${SCRIPTNAME} ]; then
+		rm ${USRLOCAL}/sbin/${SCRIPTNAME}
+	fi
 
 	echo "Done!"
 	echo "Please manually remove the Zrep Extension Command Script from the WebGUI."
@@ -476,24 +593,31 @@ zrep_init()
 
 	# Function calls.
 	platform_check
-	postinit_cmd
+	product_check
 	exec_status
 }
 
-while getopts ":ouxrvh" option; do
+# Run-time configuration.
+runtime_config
+
+while getopts ":ouxrvgth" option; do
 	case ${option} in
 		[h]) echo "Usage: ${SCRIPTNAME} -[option]";
 		echo "Options:"
-		echo "      -u  Upgrade Zrep/Add-On packages."
-		echo "      -v  Display product versions."
-		echo "      -x  Reset ${FULLAPPNAME}."
-		echo "      -r  Remove ${FULLAPPNAME}."
-		echo "      -h  Display this help message."; exit 0;;
+		echo "        -u  Upgrade Zrep/Add-On packages."
+		echo "        -v  Display product versions."
+		echo "        -g  Enables the addon GUI."
+		echo "        -t  Disable the addon GUI."
+		echo "        -x  Reset ${FULLAPPNAME}."
+		echo "        -r  Remove ${FULLAPPNAME}."
+		echo "        -h  Display this help message."; exit 0;;
 		[o]) OBI_INSTALL="ON";; # To prevent nested PHP-CGI call for installation with OBI.
 		[u]) pkg_upgrade;;
 		[x]) reset_install;;
 		[r]) remove_addon;;
 		[v]) get_versions;;
+		[g]) gui_enable; exit 0 ;; # For enable the addon gui.
+		[t]) gui_disable; exit 0 ;; # For disable the addon gui.
 		[?]) echo "Invalid option, -h for usage."; exit 1;;
 	esac
 done
