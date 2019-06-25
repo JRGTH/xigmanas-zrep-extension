@@ -140,7 +140,7 @@ zrep_initial_download()
 	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/${APPNAME} ]; then
 		# Fetch latest zrep package.
 		echo "Fetching ${APPNAME} files..."
-		fetch -ao ${CWDIR}/master.zip --no-verify-peer --timeout=30 ${ZREPURL} || \
+		fetch -ao ${CWDIR}/${BRANCH}.zip --no-verify-peer --timeout=30 ${ZREPURL} || \
 		error_notify "Error: A problem has occurred while fetching ${APPNAME}."
 		zrep_pkg_extract
 	fi
@@ -163,8 +163,8 @@ zrep_upgrade()
 			echo "New ${APPNAME} package found, performing upgrade..."
 			fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${ZREPURL} || \
 			error_notify "Error: A problem has occurred while fetching ${APPNAME} package."
-			tar -xf ${CWDIR}/update/*${BRANCH}.zip --exclude='.git*' -C ${CWDIR}/update --strip-components 1 zrep-master/zrep
-			rm -f ${CWDIR}/update/*${BRANCH}.zip
+			tar -xf ${CWDIR}/update/${BRANCH}.zip --exclude='.git*' -C ${CWDIR}/update --strip-components 1 zrep-master/zrep
+			rm -f ${CWDIR}/update/${BRANCH}.zip
 			chmod 555 ${CWDIR}/update/${APPNAME}
 			cp -Rf ${CWDIR}/update/* ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/${APPNAME}
 			rm -R ${CWDIR}/update
@@ -188,10 +188,10 @@ zrep_pkg_extract()
 	if [ -f ${CWDIR}/master.zip ]; then
 		if [ ! -f ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME} ]; then
 			echo "Extracting ${APPNAME}..."
-			tar -xf ${CWDIR}/master.zip -C ${CWDIR}/${FULLAPPNAME}${ZREPPATH} --strip-components 1 zrep-master/zrep || \
+			tar -xf ${CWDIR}/${BRANCH}.zip -C ${CWDIR}/${FULLAPPNAME}${ZREPPATH} --strip-components 1 zrep-master/zrep || \
 			error_notify "Error: A problem has occurred while extractig ${APPNAME} files."
 			chmod 555 ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME}
-			rm -f ${CWDIR}/master.zip
+			rm -f ${CWDIR}/${BRANCH}.zip
 			update_zrep_shebang
 			echo "Done!"
 		fi
@@ -217,7 +217,7 @@ ext_initial_download()
 		mkdir -p ${CWDIR}/update
 		fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${GITURL} || \
 		error_notify "Error: A problem has occurred while fetching extension package."
-		tar -xf ${CWDIR}/update/*${BRANCH}.zip --exclude='.git*' --strip-components 1 -C ${CWDIR}/update
+		tar -xf ${CWDIR}/update/${BRANCH}.zip --exclude='.git*' --strip-components 1 -C ${CWDIR}/update
 		chmod +x ${CWDIR}/update/${SCRIPTNAME}
 		cp -Rf ${CWDIR}/update/* ${CWDIR}/
 		rm -R ${CWDIR}/update
@@ -242,8 +242,9 @@ extension_upgrade()
 			echo "New ${FULLAPPNAME} package found, performing upgrade..."
 			fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${GITURL} || \
 			error_notify "Error: A problem has occurred while fetching extension package."
-			tar -xf ${CWDIR}/update/*${BRANCH}.zip --exclude='.git*' --strip-components 1 -C ${CWDIR}/update
+			tar -xf ${CWDIR}/update/${BRANCH}.zip --exclude='.git*' --strip-components 1 -C ${CWDIR}/update
 			chmod +x ${CWDIR}/update/${SCRIPTNAME}
+			rm -f ${CWDIR}/update/${BRANCH}.zip
 			cp -Rf ${CWDIR}/update/* ${CWDIR}/
 			rm -R ${CWDIR}/update
 
