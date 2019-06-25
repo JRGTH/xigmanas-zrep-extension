@@ -58,10 +58,10 @@ ZREPCONF="/conf/zrep_config"
 ZREPCONFLINK="/var/etc/zrepconf"
 INSTALLPATH="${CWDIR}/${FULLAPPNAME}"
 BRANCH="master"
-ZREPURL="https://github.com/bolthole/zrep/archive/master.zip" # Includes latest bugfixes and portability.
-ZREPURL_ALT="https://github.com/JRGTH/zrep/archive/master.zip" # Includes date fallback fix.
-GITURL="https://github.com/JRGTH/xigmanas-zrep-extension/archive/${BRANCH}.zip"
-VERFILE="https://raw.githubusercontent.com/JRGTH/xigmanas-zrep-extension/${BRANCH}/version"
+ZREPURL="https://github.com/bolthole/${APPNAME}/archive/${BRANCH}.zip" # Includes latest bugfixes and portability.
+ZREP_VERSION="https://raw.githubusercontent.com/bolthole/${APPNAME}/${BRANCH}/zrep"
+GITURL="https://github.com/JRGTH/xigmanas-${APPNAME}-extension/archive/${BRANCH}.zip"
+VERFILE="https://raw.githubusercontent.com/JRGTH/xigmanas-${APPNAME}-extension/${BRANCH}/version"
 
 error_notify()
 {
@@ -146,6 +146,42 @@ zrep_initial_download()
 	fi
 }
 
+zrep_upgrade()
+{
+	# Perform an online zrep upgrade.
+	DATE=$(date +"%a %b %d %T %Y")
+	echo "Looking for new ${APPNAME} package!"
+	mkdir -p ${CWDIR}/update
+	fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${ZREP_VERSION} || \
+	error_notify "Error: A problem has occurred while fetching version file."
+
+	# Compare version files and fetch latest package if available.
+	if [ -f ${CWDIR}/update/${APPNAME} ]; then
+		UPDATEVER=$(cat ${CWDIR}/update/${APPNAME} | grep ZREP_VERSION= | egrep -o "([0-9]{1,}\.)+[0-9]{1,}" | tr -d '.')
+		CURRENTVER=$(cat ${ZREPPATH}/${APPNAME} | grep ZREP_VERSION= | egrep -o "([0-9]{1,}\.)+[0-9]{1,}" | tr -d '.')
+		if [ "${UPDATEVER}" -gt "${CURRENTVER}" ]; then
+			echo "New ${APPNAME} package found, performing upgrade..."
+			fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${ZREPURL} || \
+			error_notify "Error: A problem has occurred while fetching ${APPNAME} package."
+			tar -xf ${CWDIR}/update/*${BRANCH}.zip --exclude='.git*' -C ${CWDIR}/update --strip-components 1 zrep-master/zrep
+			rm -f ${CWDIR}/update/*${BRANCH}.zip
+			chmod 555 ${CWDIR}/update/${APPNAME}
+			cp -Rf ${CWDIR}/update/* ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/${APPNAME}
+			rm -R ${CWDIR}/update
+			update_zrep_shebang
+
+			# Logging the update event.
+			UPDATEVERSION=$(cat ${ZREPPATH}/${APPNAME} | grep ZREP_VERSION= | cut -d"=" -f2)
+			echo "${DATE}: ${APPNAME} upgraded to ${UPDATEVERSION}" >> ${EXTLOGFILE}
+			echo "${APPNAME} upgraded to version ${UPDATEVERSION}"
+			echo "${APPNAME} package upgrade completed!"
+		else
+			echo "${APPNAME} is on the latest version!"
+			rm -R ${CWDIR}/update
+		fi
+	fi
+}
+
 zrep_pkg_extract()
 {
 	# Extract zrep script from package.
@@ -193,7 +229,7 @@ extension_upgrade()
 {
 	# Perform an online extension upgrade.
 	DATE=$(date +"%a %b %d %T %Y")
-	echo "Looking for new ${FULLAPPNAME} package!"
+	echo "Looking for new extension package!"
 	mkdir -p ${CWDIR}/update
 	fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${VERFILE} || \
 	error_notify "Error: A problem has occurred while fetching version file."
@@ -213,10 +249,10 @@ extension_upgrade()
 
 			# Logging the update event.
 			UPDATEVERSION=$(cat ${CWDIR}/version)
-			echo "${DATE}: ${FULLAPPNAME} upgraded to ${UPDATEVERSION}" >> ${EXTLOGFILE}
-			echo "${FULLAPPNAME} package upgrade completed!"
+			echo "${DATE}: extension upgraded to ${UPDATEVERSION}" >> ${EXTLOGFILE}
+			echo "Extension package upgrade completed!"
 		else
-			echo "${FULLAPPNAME} is on the latest version!"
+			echo "Extension package is on the latest version!"
 			rm -R ${CWDIR}/update
 		fi
 	fi
@@ -454,9 +490,11 @@ gui_disable()
 pkg_upgrade()
 {
 	# Re-fetch zrep package and extract.
-	echo "Removing current zrep files..."
-	rm -rf ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/zrep
-	zrep_initial_download
+	if [ -f "${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/zrep" ]; then
+		zrep_upgrade
+	else
+		zrep_initial_download
+	fi
 
 	# Check for extension updates.
 	extension_upgrade
@@ -560,7 +598,7 @@ get_versions()
 
 	# Display product versions.
 	echo -e "\nksh93 version:" && ${USRLOCAL}/bin/ksh93 --version
-	echo -e "\nzrep version:" && ${USRLOCAL}/bin/ksh93 zrep version
+	echo -e "\nzrep version:" && ${USRLOCAL}/bin/zrep version
 	echo -e "\nextension version:"
 	echo "${FULLAPPNAME} ${APPVERSION}"
 	exit 0
@@ -589,7 +627,7 @@ zrep_init()
 		echo "Unsupported version!"; exit 1
 	fi
 
-	echo "Initializing ${FULLAPPNAME}..."
+	echo "Initializing ${APPNAME}..."
 
 	# Function calls.
 	platform_check

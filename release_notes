@@ -3,6 +3,7 @@
 ========================
 Version    Description
 
+0.3.0....Compare file versions on upgrades.
 0.2.9....Add a quick overview extension gui.
 0.2.8....Added uninstall option.
 0.2.7....Fetch latest zrep from bolthole/zrep.
