@@ -74,13 +74,13 @@ error_notify()
 runtime_config()
 {
 	# Create required directories if missing.
-	if [ ! -d ${CWDIR}/conf ]; then
+	if [ ! -d "${CWDIR}/conf" ]; then
 		mkdir -p ${CWDIR}/conf
 	fi
-	if [ ! -d ${CWDIR}/log ]; then
+	if [ ! -d "${CWDIR}/log" ]; then
 		mkdir -p ${CWDIR}/log
 	fi
-	if [ ! -d ${CWDIR}/locale-zrep ]; then
+	if [ ! -d "${CWDIR}/locale-zrep" ]; then
 		mkdir -p ${CWDIR}/locale-zrep
 	fi
 }
@@ -88,7 +88,7 @@ runtime_config()
 update_freebsdconf()
 {
 	# Update FreeBSD.conf to fetch latest packages.
-	if [ -f ${PKGCONF} ]; then 
+	if [ -f "${PKGCONF}" ]; then 
 		if grep -q "quarterly" ${PKGCONF}; then
 			sed -i '' -E "s/quarterly/latest/g" ${PKGCONF} || \
 			error_notify "Error: A problem has occurred while updating FreeBSD.conf file."
@@ -101,7 +101,7 @@ ksh9x_native_download()
 	# Install latest ksh9x package.
 	if ! pkg info | grep -q ${KSH9X}; then
 		# Check if ksh9x already exist.
-		if [ ! -f ${KSH9PATH}/${KSH9X} ]; then
+		if [ ! -f "${KSH9PATH}/${KSH9X}" ]; then
 			update_freebsdconf
 			pkg install -y ${KSH9X} || error_notify "Error: A problem has occurred while fetching ${KSH9X}."
 		fi
@@ -111,7 +111,7 @@ ksh9x_native_download()
 ksh9x_initial_download()
 {
 	# Check if ksh9x already exist.
-	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${KSH9PATH}/${KSH9X} ]; then
+	if [ ! -f "${CWDIR}/${FULLAPPNAME}/${KSH9PATH}/${KSH9X}" ]; then
 		# Fetch ksh9x package.
 		update_freebsdconf
 		pkg fetch -y -o ${CWDIR}/download ${KSH9X} || \
@@ -123,7 +123,7 @@ ksh9x_initial_download()
 ksh9x_pkg_extract()
 {
 	# Extract fetched package for Embedded platform.
-	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${KSH9X}/+MANIFEST ]; then
+	if [ ! -f "${CWDIR}/${FULLAPPNAME}/${KSH9X}/+MANIFEST" ]; then
 		echo "Extracting ${KSH9X}..."
 		tar -Jxf ${CWDIR}/download/All/${KSH9X}-*.txz -C ${CWDIR}/${FULLAPPNAME}/ || \
 		error_notify "Error: A problem has occurred while extractig ${KSH9X} files."
@@ -137,7 +137,7 @@ ksh9x_pkg_extract()
 zrep_initial_download()
 {
 	# Check if zrep already exist.
-	if [ ! -f ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/${APPNAME} ]; then
+	if [ ! -f "${CWDIR}/${FULLAPPNAME}/${ZREPPATH}/${APPNAME}" ]; then
 		# Fetch latest zrep package.
 		echo "Fetching ${APPNAME} files..."
 		fetch -ao ${CWDIR}/${BRANCH}.zip --no-verify-peer --timeout=30 ${ZREPURL} || \
@@ -156,7 +156,7 @@ zrep_upgrade()
 	error_notify "Error: A problem has occurred while fetching version file."
 
 	# Compare version files and fetch latest package if available.
-	if [ -f ${CWDIR}/update/${APPNAME} ]; then
+	if [ -f "${CWDIR}/update/${APPNAME}" ]; then
 		UPDATEVER=$(cat ${CWDIR}/update/${APPNAME} | grep ZREP_VERSION= | egrep -o "([0-9]{1,}\.)+[0-9]{1,}" | tr -d '.')
 		CURRENTVER=$(cat ${ZREPPATH}/${APPNAME} | grep ZREP_VERSION= | egrep -o "([0-9]{1,}\.)+[0-9]{1,}" | tr -d '.')
 		if [ "${UPDATEVER}" -gt "${CURRENTVER}" ]; then
@@ -185,8 +185,8 @@ zrep_upgrade()
 zrep_pkg_extract()
 {
 	# Extract zrep script from package.
-	if [ -f ${CWDIR}/master.zip ]; then
-		if [ ! -f ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME} ]; then
+	if [ -f "${CWDIR}/master.zip" ]; then
+		if [ ! -f "${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME}" ]; then
 			echo "Extracting ${APPNAME}..."
 			tar -xf ${CWDIR}/${BRANCH}.zip -C ${CWDIR}/${FULLAPPNAME}${ZREPPATH} --strip-components 1 zrep-master/zrep || \
 			error_notify "Error: A problem has occurred while extractig ${APPNAME} files."
@@ -201,7 +201,7 @@ zrep_pkg_extract()
 update_zrep_shebang()
 {
 	# Update zrep shebang to meet FreeBSD requirements.
-	if [ -f ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME} ]; then 
+	if [ -f "${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME}" ]; then 
 		if grep -q "#!/bin/ksh" ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME}; then
 			sed -i '' '1s/.*/#!\/usr\/local\/bin\/ksh93\ -p/' ${CWDIR}/${FULLAPPNAME}${ZREPPATH}/${APPNAME} || \
 			error_notify "Error: A problem has occurred while updating zrep shebang."
@@ -212,7 +212,7 @@ update_zrep_shebang()
 ext_initial_download()
 {
 	# Always ensure the version file is present, otherwise update the extension files on startup.
-	if [ ! -f ${CWDIR}/version ]; then
+	if [ ! -f "${CWDIR}/version" ]; then
 		echo "Fetching and extracting extension files..."
 		mkdir -p ${CWDIR}/update
 		fetch -ao ${CWDIR}/update --no-verify-peer --timeout=30 ${GITURL} || \
@@ -221,6 +221,7 @@ ext_initial_download()
 		chmod +x ${CWDIR}/update/${SCRIPTNAME}
 		cp -Rf ${CWDIR}/update/* ${CWDIR}/
 		rm -R ${CWDIR}/update
+		rm -f ${CWDIR}/${BRANCH}.zip
 		echo "Done!"
 	fi
 }
@@ -235,7 +236,7 @@ extension_upgrade()
 	error_notify "Error: A problem has occurred while fetching version file."
 
 	# Compare version files and fetch latest package if available.
-	if [ -f ${CWDIR}/update/version ]; then
+	if [ -f "${CWDIR}/update/version" ]; then
 		UPDATEVER=$(cat ${CWDIR}/update/version | tr -d .)
 		CURRENTVER=$(cat ${CWDIR}/version | tr -d .)
 		if [ "${UPDATEVER}" -gt "${CURRENTVER}" ]; then
@@ -247,6 +248,7 @@ extension_upgrade()
 			rm -f ${CWDIR}/update/${BRANCH}.zip
 			cp -Rf ${CWDIR}/update/* ${CWDIR}/
 			rm -R ${CWDIR}/update
+			rm -f ${CWDIR}/${BRANCH}.zip
 
 			# Logging the update event.
 			UPDATEVERSION=$(cat ${CWDIR}/version)
@@ -271,27 +273,27 @@ product_check()
 create_addon_env()
 {
 	# Create required directories.
-	if [ ! -d ${CWDIR}/conf ]; then
+	if [ ! -d "${CWDIR}/conf" ]; then
 		mkdir -p ${CWDIR}/conf
 	fi
-	if [ ! -d ${CWDIR}/locale-zrep ]; then
+	if [ ! -d "${CWDIR}/locale-zrep" ]; then
 		mkdir -p ${CWDIR}/locale-zrep
 	fi
-	if [ ! -d ${CWDIR}/download/All ]; then
+	if [ ! -d "${CWDIR}/download/All" ]; then
 		mkdir -p ${CWDIR}/download/All
 	fi
-	if [ ! -d ${CWDIR}/log ]; then
+	if [ ! -d "${CWDIR}/log" ]; then
 		mkdir -p ${CWDIR}/log
 	fi
-	if [ ! -d ${CWDIR}/${FULLAPPNAME} ]; then
+	if [ ! -d "${CWDIR}/${FULLAPPNAME}" ]; then
 		mkdir -p ${CWDIR}/${FULLAPPNAME}
 	fi
-	if [ ! -d ${CWDIR}/${FULLAPPNAME}/${ZREPPATH} ]; then
+	if [ ! -d "${CWDIR}/${FULLAPPNAME}/${ZREPPATH}" ]; then
 		mkdir -p ${CWDIR}/${FULLAPPNAME}/${ZREPPATH}
 	fi
 
 	# Link zrep-init to /usr/local/sbin.
-	if [ ! -f ${USRLOCAL}/sbin/${SCRIPTNAME} ]; then
+	if [ ! -f "${USRLOCAL}/sbin/${SCRIPTNAME}" ]; then
 		ln -fs ${CWDIR}/${SCRIPTNAME} ${USRLOCAL}/sbin/${SCRIPTNAME}
 	fi
 }
@@ -317,7 +319,7 @@ platform_check()
 bin_symlinks()
 {
 	# Main zrep/ksh9x symlinks.
-	if [ -d ${INSTALLPATH}/${USRLOCAL}/bin ]; then
+	if [ -d "${INSTALLPATH}/${USRLOCAL}/bin" ]; then
 		cd ${INSTALLPATH}/${USRLOCAL}/bin
 		for file in *
 			do
@@ -332,34 +334,34 @@ sys_symlinkdir()
 	# This environment will be checked each time the script is started for consistency.
 
 	# Required directories for ksh9x.
-	if [ ! -d ${USRLOCAL}/share/examples ]; then
+	if [ ! -d "${USRLOCAL}/share/examples" ]; then
 		mkdir -p ${USRLOCAL}/share/examples
 	fi
-	if [ ! -d ${USRLOCAL}/man/man1 ]; then
+	if [ ! -d "${USRLOCAL}/man/man1" ]; then
 		mkdir -p ${USRLOCAL}/man/man1
 	fi
-	if [ ! -d ${USRLOCAL}/share/licenses ]; then
+	if [ ! -d "${USRLOCAL}/share/licenses" ]; then
 		mkdir -p ${USRLOCAL}/share/licenses
 	fi
 
 	bin_symlinks
 
 	# Required symlinks for ksh9x. 
-	if [ -d ${INSTALLPATH}/${USRLOCAL}/man/man1 ]; then
+	if [ -d "${INSTALLPATH}/${USRLOCAL}/man/man1" ]; then
 		cd ${INSTALLPATH}/${USRLOCAL}/man/man1
 		for file in *
 			do
 				ln -Ffhs ${INSTALLPATH}/${USRLOCAL}/man/man1/${file} ${USRLOCAL}/man/man1/${file}
 		done
 	fi
-	if [ -d ${INSTALLPATH}/${USRLOCAL}/share/examples ]; then
+	if [ -d "${INSTALLPATH}/${USRLOCAL}/share/examples" ]; then
 		cd ${INSTALLPATH}/${USRLOCAL}/share/examples
 		for file in *
 			do
 				ln -Ffhs ${INSTALLPATH}/${USRLOCAL}/share/examples/${file} ${USRLOCAL}/share/examples/${file}
 		done
 	fi
-	if [ -d ${INSTALLPATH}/${USRLOCAL}/share/licenses ]; then
+	if [ -d "${INSTALLPATH}/${USRLOCAL}/share/licenses" ]; then
 		cd ${INSTALLPATH}/${USRLOCAL}/share/licenses
 		for file in *
 			do
@@ -505,22 +507,22 @@ reset_install()
 {
 	# Reset the extension environment.
 	echo "Removing extension files..."
-	if [ -d ${CWDIR}/conf ]; then
+	if [ -d "${CWDIR}/conf" ]; then
 		rm -rf ${CWDIR}/conf
 	fi
-	if [ -d ${CWDIR}/log ]; then
+	if [ -d "${CWDIR}/log" ]; then
 		rm -rf ${CWDIR}/log
 	fi
-	if [ -d ${CWDIR}/locale-zrep ]; then
+	if [ -d "${CWDIR}/locale-zrep" ]; then
 		rm -rf ${CWDIR}/locale-zrep
 	fi
-	if [ -d ${CWDIR}/${FULLAPPNAME} ]; then
+	if [ -d "${CWDIR}/${FULLAPPNAME}" ]; then
 		rm -rf ${CWDIR}/${FULLAPPNAME}
 	fi
-	if [ -d ${CWDIR}/download ]; then
+	if [ -d "${CWDIR}/download" ]; then
 		rm -rf ${CWDIR}/download
 	fi
-	if [ -f ${CWDIR}/version ]; then
+	if [ -f "${CWDIR}/version" ]; then
 		rm -f ${CWDIR}/version
 	fi
 	runtime_config
@@ -548,23 +550,26 @@ remove_addon()
 
 	# Check for working platform.
 	if [ "${PRDPLATFORM}" = "x64-embedded" ]; then
-		if [ -d ${USRLOCAL}/share/examples/${KSH9X} ]; then
+		if [ -d "${USRLOCAL}/share/examples/${KSH9X}" ]; then
 			rm -rf ${USRLOCAL}/share/examples/${KSH9X}
 		fi
-		if [ -f ${USRLOCAL}/man/man1/${KSH9X}.1.gz ]; then
+		if [ -f "${USRLOCAL}/man/man1/${KSH9X}.1.gz" ]; then
 			rm -f ${USRLOCAL}/man/man1/${KSH9X}.1.gz
 		fi
-		if [ -d ${USRLOCAL}/share/licenses/${KSH9X}-20120801_2 ]; then
-			rm -rf ${USRLOCAL}/share/licenses/${KSH9X}-20120801_2
+		if [ -d "${USRLOCAL}/share/licenses" ]; then
+			KSH93_LIC=$(find ${USRLOCAL}/share/licenses -name "${KSH9X}-*")
+			if [ -n "${KSH93_LIC}" ]; then
+				rm -rf ${USRLOCAL}/share/licenses/${KSH93_LIC}
+			fi
 		fi
-		if [ -f ${USRLOCAL}/bin/${KSH9X} ]; then
+		if [ -f "${USRLOCAL}/bin/${KSH9X}" ]; then
 			rm -f ${USRLOCAL}/bin/${KSH9X}
 		fi
-		if [ -f ${USRLOCAL}/bin/${APPNAME} ]; then
+		if [ -f "${USRLOCAL}/bin/${APPNAME}" ]; then
 			rm -f ${USRLOCAL}/bin/${APPNAME}
 		fi
 	elif [ "${PRDPLATFORM}" = "x64-full" ]; then
-		if [ -f ${USRLOCAL}/bin/${APPNAME} ]; then
+		if [ -f "${USRLOCAL}/bin/${APPNAME}" ]; then
 			rm -f ${USRLOCAL}/bin/${APPNAME}
 		fi
 		pkg delete -y ${KSH9X}
@@ -574,12 +579,12 @@ remove_addon()
 	# to protect any user-created custom files.
 	FILES="conf download gui locale-zrep log zrep-addon README.md postinit release_notes version zrep-init"
 	for file in ${FILES}; do
-		if [ -f ${CWDIR}/${file} ] || [ -d ${CWDIR}/${file} ]; then
+		if [ -f "${CWDIR}/${file}" ] || [ -d "${CWDIR}/${file}" ]; then
 			rm -rf ${CWDIR}/${file}
 		fi
 	done
 	
-	if [ ! -f ${USRLOCAL}/sbin/${SCRIPTNAME} ]; then
+	if [ ! -f "${USRLOCAL}/sbin/${SCRIPTNAME}" ]; then
 		rm ${USRLOCAL}/sbin/${SCRIPTNAME}
 	fi
 
