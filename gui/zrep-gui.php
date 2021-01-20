@@ -9,7 +9,7 @@
 	All rights reserved.
 
 	Portions of NAS4Free (http://www.nas4free.org).
-	Copyright (c) 2012-2016 The NAS4Free Project <info@nas4free.org>.
+	Copyright (c) 2012-2021 The NAS4Free Project <info@nas4free.org>.
 	All rights reserved.
 
 	Redistribution and use in source and binary forms, with or without
@@ -192,6 +192,12 @@ $(document).ready(function(){
 </script>
 <form action="zrep-gui.php" method="post" name="iform" id="iform" onsubmit="spinner()">
 	<table width="100%" border="0" cellpadding="0" cellspacing="0">
+		<tr><td class="tabnavtbl">
+				<ul id="tabnav">
+				<li class="tabact"><a href="zrep-gui.php"><span><?=gettext("Zrep");?></span></a></li>
+				<li class="tabinact"><a href="zrep-info.php"><span><?=gettext("Information");?></span></a></li>
+			</ul>
+		</td></tr>
 		<tr><td class="tabcont">
 			<?php if (!empty($input_errors)) print_input_errors($input_errors);?>
 			<?php if (!empty($savemsg)) print_info_box($savemsg);?>

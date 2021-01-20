@@ -473,6 +473,7 @@ gui_disable()
 	# Disable gui if -t option specified.
 	if [ -d "${CWDIR}/gui" ]; then
 		rm -f ${WWWPATH}/zrep-gui.php
+		rm -f ${WWWPATH}/zrep-info.php
 		rm -Rf ${WWWPATH}/ext/zrep-gui
 		rm -f ${LOCALSHAREPATH}/locale-zrep
 		rm -Rf ${ZREPCONFLINK}
@@ -543,6 +544,7 @@ remove_addon()
 	
 	if [ -d "${WWWPATH}/zrep-gui.php" ]; then
 		rm -f ${WWWPATH}/zrep-gui.php
+		rm -f ${WWWPATH}/zrep-info.php
 		rm -Rf ${WWWPATH}/ext/zrep-gui
 		rm -f ${LOCALSHAREPATH}/locale-zrep
 		rm -Rf ${ZREPCONFLINK}
