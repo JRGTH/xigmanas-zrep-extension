@@ -32,7 +32,6 @@
 */
 require_once 'auth.inc';
 require_once 'guiconfig.inc';
-require_once("zfs_bootenv_gui-lib.inc");
 
 function zfs_get_zrep_list() {
 	global $output;

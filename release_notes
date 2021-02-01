@@ -3,6 +3,7 @@
 ========================
 Version    Description
 
+0.3.3....Fix PHP error in the Information page.
 0.3.2....Add zrep status information page.
 0.3.1....Cleanup unwanted files after install/update, code maintenance.
 0.3.0....Compare file versions on upgrades.
