@@ -1,6 +1,6 @@
 <?php
 /*
-	zrep-info.php
+	zrep-params.php
 
 	Copyright (c) 2018 - 2021 Jose Rivera (JoseMR)
     All rights reserved.
@@ -35,16 +35,16 @@ require_once 'guiconfig.inc';
 
 function zfs_get_zrep_list() {
 	global $output;
-	$cmd = 'zrep status -v -a 2>&1';
+	$cmd = 'zrep list -v 2>&1';
 	unset($output);
 	mwexec2($cmd,$output);
 	if(empty($output)):
-		$output = [gtext('No zrep status information available.')];
+		$output = [gtext('No zrep parameters information available.')];
 	endif;
 	return implode(PHP_EOL,$output);
 }
 
-$pgtitle = [gtext("Extensions"), gtext('Zrep'),gtext('Information')];
+$pgtitle = [gtext("Extensions"), gtext('Zrep'),gtext('Parameters')];
 include 'fbegin.inc';
 $document = new co_DOMDocument();
 $document->
@@ -52,7 +52,7 @@ $document->
 		push()->
 		add_tabnav_upper()->
 			ins_tabnav_record('zrep-gui.php',gettext('Zrep'),gettext('Reload page'),true)->
-			ins_tabnav_record('zrep-info.php',gettext('Information'),gettext('Reload page'),true)->
+			ins_tabnav_record('zrep-info.php',gettext('Parameters'),gettext('Reload page'),true)->
 			ins_tabnav_record('zrep-params.php',gettext('Parameters'),gettext('Reload page'),true);
 $document->render();
 ?>
@@ -64,12 +64,12 @@ $document->render();
 		</colgroup>
 		<thead>
 <?php
-			html_titleline2(gettext('Zrep Information & Status'));
+			html_titleline2(gettext('Zrep Parameters & Info'));
 ?>
 		</thead>
 		<tbody>
 			<tr>
-				<td class="celltag"><?=gtext('Information & Status');?></td>
+				<td class="celltag"><?=gtext('Parameters & Info');?></td>
 				<td class="celldata">
 					<pre><span id="zfs_zrep_list"><?=zfs_get_zrep_list();?></span></pre>
 				</td>

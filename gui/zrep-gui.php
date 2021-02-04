@@ -196,6 +196,7 @@ $(document).ready(function(){
 				<ul id="tabnav">
 				<li class="tabact"><a href="zrep-gui.php"><span><?=gettext("Zrep");?></span></a></li>
 				<li class="tabinact"><a href="zrep-info.php"><span><?=gettext("Information");?></span></a></li>
+				<li class="tabinact"><a href="zrep-params.php"><span><?=gettext("Parameters");?></span></a></li>
 			</ul>
 		</td></tr>
 		<tr><td class="tabcont">
