@@ -52,7 +52,7 @@ $document->
 		push()->
 		add_tabnav_upper()->
 			ins_tabnav_record('zrep-gui.php',gettext('Zrep'),gettext('Reload page'),true)->
-			ins_tabnav_record('zrep-info.php',gettext('Parameters'),gettext('Reload page'),true)->
+			ins_tabnav_record('zrep-info.php',gettext('Information'),gettext('Reload page'),true)->
 			ins_tabnav_record('zrep-params.php',gettext('Parameters'),gettext('Reload page'),true);
 $document->render();
 ?>
