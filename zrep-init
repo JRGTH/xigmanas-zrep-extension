@@ -125,11 +125,11 @@ ksh9x_pkg_extract()
 	# Extract fetched package for Embedded platform.
 	if [ ! -f "${CWDIR}/${FULLAPPNAME}/${KSH9X}/+MANIFEST" ]; then
 		echo "Extracting ${KSH9X}..."
-		tar -Jxf ${CWDIR}/download/All/${KSH9X}-*.txz -C ${CWDIR}/${FULLAPPNAME}/ || \
+		tar -Jxf ${CWDIR}/download/All/${KSH9X}-*.[tp][xk][zg] -C ${CWDIR}/${FULLAPPNAME}/ || \
 		error_notify "Error: A problem has occurred while extractig ${KSH9X} files."
 		mkdir -p ${CWDIR}/${FULLAPPNAME}/${KSH9X}
 		mv ${CWDIR}/${FULLAPPNAME}/+* ${CWDIR}/${FULLAPPNAME}/${KSH9X}
-		rm ${CWDIR}/download/All/${KSH9X}-*.txz
+		rm ${CWDIR}/download/All/${KSH9X}-*.[tp][xk][zg]
 		echo "Done!"
 	fi
 }
