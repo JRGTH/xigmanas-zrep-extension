@@ -57,7 +57,8 @@ $cwdir = exec("/usr/bin/grep 'INSTALL_DIR=' {$confdir}/conf/zrep_config | cut -d
 $rootfolder = $cwdir;
 $configfile = "{$rootfolder}/conf/zrep_config";
 $versionfile = "{$rootfolder}/version";
-$date = strftime('%c');
+//$date = strftime('%c');                // Previous PHP versions, deprecated as of PHP 8.1.
+$date = date('D M d h:i:s Y', time());   // Equivalent date replacement for the previous strftime function.
 $logfile = "{$rootfolder}/log/zrep_ext.log";
 $logevent = "{$rootfolder}/log/zrep_last_event.log";
 $prdname = "zrep";
